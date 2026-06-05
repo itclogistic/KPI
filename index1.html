@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warehouse Dashboard — ITC Logistic AUMOVIO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --surface2: #f0f2f5;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #1a9e5c;
+    --accent2: #185FA5;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --ok: #1a9e5c;
+    --itc-blue: #185FA5;
+    --itc-green: #1a9e5c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 52px;
+  }
+  .nav-brand {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding-right: 24px;
+    border-right: 1px solid var(--border);
+    margin-right: 24px;
+    white-space: nowrap;
+  }
+  .nav-brand span { color: var(--itc-blue); }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .15s, background .15s;
+    cursor: pointer;
+  }
+  .nav-link:hover { color: var(--text); background: var(--surface); }
+  .nav-link.active { color: var(--text); background: var(--surface2); border-bottom: 2px solid var(--itc-blue); border-radius: 6px 6px 0 0; }
+
+  /* MONTH FILTER */
+  .month-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .month-filter label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+  }
+  .month-filter select {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 5px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .month-filter select:focus { border-color: var(--itc-blue); }
+  .month-count { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .nav-link.disabled { opacity: .35; pointer-events: none; cursor: default; }
+
+  /* PAGES */
+  .page { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* HEADER */
+  .page-header { margin-bottom: 28px; }
+  .page-title {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -.02em;
+  }
+  .page-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kpi-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -.03em;
+    line-height: 1;
+  }
+  .kpi-unit {
+    font-size: 14px;
+    color: var(--muted);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+  .kpi-target {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+  .kpi-progress {
+    height: 2px;
+    background: var(--surface2);
+    border-radius: 1px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .kpi-bar {
+    height: 100%;
+    border-radius: 1px;
+    transition: width .5s ease;
+  }
+
+  /* SECTION */
+  .section { margin-bottom: 32px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+  }
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .lsq {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* CHART */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* TEAM GRID */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .team-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .team-val { color: var(--text); font-weight: 500; }
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge-ok { background: rgba(26,158,92,.12); color: #157a47; }
+  .badge-warn { background: rgba(217,119,6,.12); color: #b45309; }
+  .badge-bad { background: rgba(220,38,38,.12); color: #b91c1c; }
+
+  /* DEFECT LIST */
+  .defect-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .defect-row {
+    display: grid;
+    grid-template-columns: 100px 180px 1fr;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    align-items: start;
+  }
+  .defect-row:last-child { border-bottom: none; }
+  .defect-row.header { background: var(--surface2); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+  .defect-date { color: var(--muted); font-family: 'DM Mono', monospace; }
+  .defect-team { color: var(--accent2); }
+  .defect-txt { color: var(--text); }
+
+  /* IMPORT */
+  .import-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 32px;
+  }
+  .import-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .import-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .import-box textarea {
+    width: 100%;
+    height: 110px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 10px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .import-box textarea:focus { border-color: var(--itc-blue); }
+  .import-actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: #e5e7eb; border-color: rgba(0,0,0,.2); }
+  .btn-primary {
+    background: rgba(24,95,165,.1);
+    border-color: rgba(24,95,165,.35);
+    color: #185FA5;
+  }
+  .btn-primary:hover { background: rgba(24,95,165,.18); }
+  .import-msg { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* COMING SOON */
+  .coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--muted);
+    gap: 12px;
+  }
+  .coming-soon .big { font-size: 48px; opacity: .15; }
+  .coming-soon p { font-size: 13px; font-family: 'DM Mono', monospace; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">ITC <span>AUMOVIO</span></div>
+  <div class="nav-links">
+    <a class="nav-link active" onclick="showPage('p1',this)">Operațiuni depozit</a>
+    <a class="nav-link disabled" onclick="showPage('p2',this)">Stoc & movements</a>
+    <a class="nav-link disabled" onclick="showPage('p3',this)">Livrări inbound</a>
+  </div>
+</nav>
+
+<!-- PAGE 1 -->
+<div class="page active" id="p1">
+  <div class="page-header">
+    <div class="page-title">Operațiuni depozit</div>
+    <div class="page-sub" id="p1sub">— ture înregistrate</div>
+  </div>
+
+  <div class="month-filter">
+    <label>Lună</label>
+    <select id="monthSelect" onchange="applyFilter()">
+      <option value="all">Toate</option>
+    </select>
+    <span class="month-count" id="monthCount"></span>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți descărcați / tură</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#1a9e5c"></span>Descărcați</span>
+      <span><span class="lsq" style="background:rgba(26,158,92,.25);border:1px dashed #1a9e5c"></span>Target ≥ 200</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cDesc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți încărcați / tură</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#185FA5"></span>Încărcați</span>
+      <span><span class="lsq" style="background:rgba(24,95,165,.2);border:1px dashed #185FA5"></span>Target ≥ 198</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cInc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți rămași la podea la finalul turei</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#8e44ad"></span>Paleți la podea (neridicat la predarea turei)</span>
+      <span><span class="lsq" style="background:rgba(142,68,173,.2);border:1px dashed #8e44ad"></span>Target = 0</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cRec"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Performanță per team</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="team-grid" id="teamGrid"></div>
+  </div>
+
+  <div class="import-box">
+    <div class="import-title">Actualizare date</div>
+    <div class="import-hint">Deschide Google Sheets → Ctrl+A → Ctrl+C → lipește mai jos → Reîncarcă.</div>
+    <textarea id="pasteArea" placeholder="Lipește datele din Sheets aici (inclusiv header)..."></textarea>
+    <div class="import-actions">
+      <button class="btn btn-primary" onclick="importData()">Reîncarcă dashboard</button>
+      <span class="import-msg" id="importMsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page" id="p2">
+  <div class="page-header">
+    <div class="page-title">Stoc & movements</div>
+    <div class="page-sub">Power BI extract · lunar</div>
+  </div>
+  <div class="coming-soon">
+    <div class="big">◎</div>
+    <p>în construcție</p>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page" id="p3">
+  <div class="page-header">
+    <div class="page-title">Livrări inbound</div>
+    <div class="page-sub">Export AUMOVIO · camioane & loading units</div>
+  </div>
+  <div class="coming-soon">
+    <div class="big">◎</div>
+    <p>în construcție</p>
+  </div>
+</div>
+
+<script>
+const DEFAULT_DATA = [
+["29.05.2026 18:40:37","Petcu","Tat Ioan","Da","Da","R1, R8 se încălzește da eroare","","Team 2 - Petcu Nicolae","07:00 - 19:00",334,258,121,50],
+["30.05.2026 06:37:58","Tat","Costin","Da","Da","R1,defect/R8,se încălzește și nu mai funcționează/R6se încălzește și se oprește brusc/R5 se încălzește și miroase urat de la baterie","","Team 4 - Tat Ioan","19:00 - 07:00",304,211,98,0],
+["30.05.2026 19:17:15","Costin","Petcu","Da","Da","R6 se incalzeste si se opreste","","Team 3 - Costin Alexandru","07:00 - 19:00",153,232,168,0],
+["31.05.2026 06:23:30","Petcu","Palasanu","Da","Da","R8 se incalzeste","","Team 2 - Petcu Nicolae","19:00 - 07:00",135,213,51,0],
+["01.06.2026 06:48:24","Devicsi","Ionica","Da","Da","","","Team 3 - Costin Alexandru","19:00 - 07:00",5,206,5,0],
+["01.06.2026 18:54:10","Pop Bogdan","Palasanu Andreas","Da","Da","","","Team 4 - Tat Ioan","07:00 - 19:00",12,84,0,0],
+["02.06.2026 06:42:16","Palasanu","Petcu","Da","Da","","","Team 1 - Palasanu Andreas","19:00 - 07:00",30,20,0,0],
+["02.06.2026 18:20:25","Petcu","Tat Ionica","Da","Da","R8 si R6 se incalzesc","","Team 2 - Petcu Nicolae","07:00 - 19:00",651,285,44,66],
+["03.06.2026 06:24:23","Tat","Costin","Da","Da","R1 defect/R5 defect sare acid de la baterie/R8 se încălzește","","Team 4 - Tat Ioan","19:00 - 07:00",295,211,20,0],
+["03.06.2026 18:54:29","Costin","Petcu","Da","Da","R5 curge acid","","Team 3 - Costin Alexandru","07:00 - 19:00",421,242,81,35],
+["04.06.2026 06:18:31","Petcu","Palasanu","Da","Da","R6 ,R8 se incalzesc +eroare bord","","Team 2 - Petcu Nicolae","19:00 - 07:00",232,261,0,30],
+["04.06.2026 18:21:59","Palasanu","Costin","Da","Da","","","Team 1 - Palasanu Andreas","07:00 - 19:00",302,184,0,0]
+];
+
+const TARGET_DESC = 200;
+const TARGET_INC = 198;
+const TARGET_REC = 0; // paleți recepționați la podea
+
+let allData = DEFAULT_DATA;
+let data = DEFAULT_DATA;
+let charts = {};
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+function getMonth(ts) {
+  // ts format: "DD.MM.YYYY HH:MM:SS"
+  const p = ts.split('.');
+  if (p.length < 3) return '';
+  const month = p[1];
+  const year = p[2].split(' ')[0];
+  return year + '-' + month;
+}
+
+function monthLabel(key) {
+  if (key === 'all') return 'Toate';
+  const [y, m] = key.split('-');
+  const months = ['','Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
+  return months[parseInt(m)] + ' ' + y;
+}
+
+function buildMonthFilter() {
+  const months = {};
+  allData.forEach(r => {
+    const k = getMonth(r[0]);
+    if (k) months[k] = (months[k]||0) + 1;
+  });
+  const sel = document.getElementById('monthSelect');
+  const current = sel.value;
+  // clear & rebuild options
+  sel.innerHTML = '<option value="all">Toate</option>';
+  Object.keys(months).sort().forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = monthLabel(k);
+    sel.appendChild(opt);
+  });
+  // restore selection if still valid
+  if (current && sel.querySelector(`option[value="${current}"]`)) {
+    sel.value = current;
+  }
+}
+
+function applyFilter() {
+  const sel = document.getElementById('monthSelect').value;
+  if (sel === 'all') {
+    data = allData;
+  } else {
+    data = allData.filter(r => getMonth(r[0]) === sel);
+  }
+  render();
+}
+
+function shortDate(ts) {
+  const p = ts.split(' ');
+  return p[0].substring(0,5) + ' ' + p[1].substring(0,5);
+}
+
+function statusColor(val, target, higherBetter) {
+  if (higherBetter) {
+    const pct = val / target;
+    if (pct >= 1) return '#157a47';
+    if (pct >= 0.8) return '#b45309';
+    return '#b91c1c';
+  } else {
+    if (val === 0) return '#157a47';
+    if (val <= 20) return '#b45309';
+    return '#b91c1c';
+  }
+}
+
+function badgeClass(val, target, higherBetter) {
+  if (higherBetter) {
+    const pct = val / target;
+    if (pct >= 1) return 'badge-ok';
+    if (pct >= 0.75) return 'badge-warn';
+    return 'badge-bad';
+  } else {
+    if (val === 0) return 'badge-ok';
+    if (val <= 20) return 'badge-warn';
+    return 'badge-bad';
+  }
+}
+
+function render() {
+  const n = data.length;
+  if (n === 0) {
+    document.getElementById('kpiGrid').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Nicio tură în perioada selectată.</div>';
+    document.getElementById('teamGrid').innerHTML = '';
+    document.getElementById('monthCount').textContent = '0 ture';
+    return;
+  }
+
+  const totalDesc = data.reduce((s,r) => s + r[9], 0);
+  const totalInc = data.reduce((s,r) => s + r[10], 0);
+  const totalRec = data.reduce((s,r) => s + r[12], 0); // col 12 = paleți recepționați la podea
+  const avgDesc = Math.round(totalDesc / n);
+  const avgInc = Math.round(totalInc / n);
+  const avgRec = Math.round(totalRec / n);
+  const tureAboveDesc = data.filter(r => r[9] >= TARGET_DESC).length;
+  const tureAboveInc = data.filter(r => r[10] >= TARGET_INC).length;
+  const tureZeroRec = data.filter(r => r[12] === 0).length;
+
+  const pctDesc = Math.min(100, Math.round(avgDesc / TARGET_DESC * 100));
+  const pctInc = Math.min(100, Math.round(avgInc / TARGET_INC * 100));
+  const colDesc = statusColor(avgDesc, TARGET_DESC, true);
+  const colInc = statusColor(avgInc, TARGET_INC, true);
+  const colRec = statusColor(avgRec, TARGET_REC, false);
+  // for rec bar: 0 = 100% good, anything above = red
+  const pctRec = avgRec === 0 ? 100 : Math.min(100, Math.round(avgRec / 100 * 100));
+
+  // date range
+  const d0 = data[0][0].split(' ')[0];
+  const d1 = data[n-1][0].split(' ')[0];
+  document.getElementById('p1sub').textContent = `${d0} – ${d1} · ${n} ture înregistrate`;
+  document.getElementById('monthCount').textContent = `${n} ture`;
+
+  // KPI cards — fără defecte
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colDesc}"></span>Paleți descărcați — medie/tură</div>
+      <div class="kpi-value">${avgDesc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_DESC} · ${tureAboveDesc}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${pctDesc}%;background:${colDesc}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colInc}"></span>Paleți încărcați — medie/tură</div>
+      <div class="kpi-value">${avgInc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_INC} · ${tureAboveInc}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${pctInc}%;background:${colInc}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#185FA5"></span>Total paleți descărcați</div>
+      <div class="kpi-value">${totalDesc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">perioada selectată · ${n} ture</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:100%;background:#185FA5"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colRec}"></span>Paleți rămași la podea — finalul turei</div>
+      <div class="kpi-value">${avgRec.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target = 0 · ${tureZeroRec}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${avgRec===0?100:Math.min(100,pctRec)}%;background:${colRec}"></div></div>
+    </div>
+  `;
+
+  // Grafice separate per KPI
+  const labels = data.map(r => shortDate(r[0]));
+  const descArr = data.map(r => r[9]);
+  const incArr = data.map(r => r[10]);
+  const recArr = data.map(r => r[12]);
+
+  const chartOpts = (color, targetVal, targetColor) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 10, family: 'DM Mono' }, maxRotation: 45, autoSkip: false } },
+      y: {
+        grid: { color: 'rgba(0,0,0,.06)' },
+        ticks: { color: '#6b7280', font: { size: 11 } },
+        suggestedMin: 0
+      }
+    }
+  });
+
+  // Chart Descărcat
+  if (charts.cDesc) charts.cDesc.destroy();
+  charts.cDesc = new Chart(document.getElementById('cDesc'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Descărcați', data: descArr, backgroundColor: 'rgba(26,158,92,.7)', borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(TARGET_DESC), type: 'line', borderColor: '#1a9e5c', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: chartOpts('#1a9e5c', TARGET_DESC, '#1a9e5c')
+  });
+
+  // Chart Încărcat
+  if (charts.cInc) charts.cInc.destroy();
+  charts.cInc = new Chart(document.getElementById('cInc'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Încărcați', data: incArr, backgroundColor: 'rgba(24,95,165,.7)', borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(TARGET_INC), type: 'line', borderColor: '#185FA5', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: chartOpts('#185FA5', TARGET_INC, '#185FA5')
+  });
+
+  // Chart Podea (target = 0, linie la 0)
+  if (charts.cRec) charts.cRec.destroy();
+  charts.cRec = new Chart(document.getElementById('cRec'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Podea finalul turei', data: recArr, backgroundColor: recArr.map(v => v === 0 ? 'rgba(26,158,92,.55)' : 'rgba(142,68,173,.7)'), borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(0), type: 'line', borderColor: '#8e44ad', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      ...chartOpts('#8e44ad', 0, '#8e44ad'),
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 10, family: 'DM Mono' }, maxRotation: 45, autoSkip: false } },
+        y: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 11 }, stepSize: 10 }, suggestedMin: 0, suggestedMax: Math.max(...recArr, 10) + 5 }
+      }
+    }
+  });
+
+  // Teams
+  const teams = {};
+  const teamOrder = ['Team 1 - Palasanu Andreas','Team 2 - Petcu Nicolae','Team 3 - Costin Alexandru','Team 4 - Tat Ioan'];
+  data.forEach(r => {
+    const t = r[7];
+    if (!teams[t]) teams[t] = { ture:0, desc:0, inc:0, rec:0 };
+    teams[t].ture++;
+    teams[t].desc += r[9];
+    teams[t].inc += r[10];
+    teams[t].rec += r[12];
+  });
+
+  let teamHtml = '';
+  teamOrder.forEach(t => {
+    const d = teams[t];
+    if (!d) return;
+    const avgD = Math.round(d.desc / d.ture);
+    const avgI = Math.round(d.inc / d.ture);
+    const avgR = Math.round(d.rec / d.ture);
+    const bcD = badgeClass(avgD, TARGET_DESC, true);
+    const bcI = badgeClass(avgI, TARGET_INC, true);
+    const bcR = badgeClass(avgR, TARGET_REC, false);
+    const shortN = t.replace('Team ', 'T').replace(' - ', ' · ');
+    teamHtml += `<div class="team-card">
+      <div class="team-name">${shortN}</div>
+      <div class="team-row"><span>Ture</span><span class="team-val">${d.ture}</span></div>
+      <div class="team-row"><span>Desc. mediu/tură</span><span class="badge ${bcD}">${avgD}</span></div>
+      <div class="team-row"><span>Inc. mediu/tură</span><span class="badge ${bcI}">${avgI}</span></div>
+      <div class="team-row"><span>Podea finalul turei</span><span class="badge ${bcR}">${avgR}</span></div>
+    </div>`;
+  });
+  document.getElementById('teamGrid').innerHTML = teamHtml;
+}
+
+function parseRows(txt) {
+  const lines = txt.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const p = lines[i].split('\t');
+    if (p.length < 10) continue;
+    const desc = parseInt(p[9]) || 0;
+    const inc = parseInt(p[10]) || 0;
+    const nrec = parseInt(p[11]) || 0;
+    const rec = parseInt(p[12]) || 0;
+    if (!p[0].trim()) continue;
+    rows.push([p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),(p[5]||'').trim(),(p[6]||'').trim(),(p[7]||'').trim(),(p[8]||'').trim(),desc,inc,nrec,rec]);
+  }
+  return rows.length ? rows : null;
+}
+
+function importData() {
+  const txt = document.getElementById('pasteArea').value.trim();
+  if (!txt) { document.getElementById('importMsg').textContent = 'Lipește date mai întâi.'; return; }
+  const rows = parseRows(txt);
+  if (!rows) { document.getElementById('importMsg').textContent = 'Format nerecunoscut — copiază direct din Sheets.'; return; }
+  allData = rows;
+  buildMonthFilter();
+  applyFilter();
+  document.getElementById('importMsg').textContent = rows.length + ' ture importate ✓';
+  document.getElementById('pasteArea').value = '';
+}
+
+// Init
+buildMonthFilter();
+applyFilter();
+</script>
+</body>
+</html>
