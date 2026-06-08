@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warehouse Dashboard — ITC Logistic AUMOVIO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --surface2: #f0f2f5;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #1a9e5c;
+    --accent2: #185FA5;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --ok: #1a9e5c;
+    --itc-blue: #185FA5;
+    --itc-green: #1a9e5c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 52px;
+  }
+  .nav-brand {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding-right: 24px;
+    border-right: 1px solid var(--border);
+    margin-right: 24px;
+    white-space: nowrap;
+  }
+  .nav-brand span { color: var(--itc-blue); }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .15s, background .15s;
+    cursor: pointer;
+  }
+  .nav-link:hover { color: var(--text); background: var(--surface); }
+  .nav-link.active { color: var(--text); background: var(--surface2); border-bottom: 2px solid var(--itc-blue); border-radius: 6px 6px 0 0; }
+
+  /* MONTH FILTER */
+  .month-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .month-filter label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+  }
+  .month-filter select {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 5px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .month-filter select:focus { border-color: var(--itc-blue); }
+  .month-count { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .nav-link.disabled { opacity: .35; pointer-events: none; cursor: default; }
+
+  /* PAGES */
+  .page { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* HEADER */
+  .page-header { margin-bottom: 28px; }
+  .page-title {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -.02em;
+  }
+  .page-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kpi-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -.03em;
+    line-height: 1;
+  }
+  .kpi-unit {
+    font-size: 14px;
+    color: var(--muted);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+  .kpi-target {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+  .kpi-progress {
+    height: 2px;
+    background: var(--surface2);
+    border-radius: 1px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .kpi-bar {
+    height: 100%;
+    border-radius: 1px;
+    transition: width .5s ease;
+  }
+
+  /* SECTION */
+  .section { margin-bottom: 32px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+  }
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .lsq {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* CHART */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* TEAM GRID */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .team-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .team-val { color: var(--text); font-weight: 500; }
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge-ok { background: rgba(26,158,92,.12); color: #157a47; }
+  .badge-warn { background: rgba(217,119,6,.12); color: #b45309; }
+  .badge-bad { background: rgba(220,38,38,.12); color: #b91c1c; }
+
+  /* DEFECT LIST */
+  .defect-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .defect-row {
+    display: grid;
+    grid-template-columns: 100px 180px 1fr;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    align-items: start;
+  }
+  .defect-row:last-child { border-bottom: none; }
+  .defect-row.header { background: var(--surface2); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+  .defect-date { color: var(--muted); font-family: 'DM Mono', monospace; }
+  .defect-team { color: var(--accent2); }
+  .defect-txt { color: var(--text); }
+
+  /* IMPORT */
+  .import-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 32px;
+  }
+  .import-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .import-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .import-box textarea {
+    width: 100%;
+    height: 110px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 10px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .import-box textarea:focus { border-color: var(--itc-blue); }
+  .import-actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: #e5e7eb; border-color: rgba(0,0,0,.2); }
+  .btn-primary {
+    background: rgba(24,95,165,.1);
+    border-color: rgba(24,95,165,.35);
+    color: #185FA5;
+  }
+  .btn-primary:hover { background: rgba(24,95,165,.18); }
+  .import-msg { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* COMING SOON */
+  .coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--muted);
+    gap: 12px;
+  }
+  .coming-soon .big { font-size: 48px; opacity: .15; }
+  .coming-soon p { font-size: 13px; font-family: 'DM Mono', monospace; }
+
+  /* SEMAFOR VIZUAL */
+  .chart-semafor {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 3px;
+    vertical-align: middle;
+    margin-left: 10px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 5px 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  }
+  .sem-light {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    transition: background .2s, box-shadow .2s;
+  }
+  .sem-light.active-red   { background: #e74c3c; box-shadow: 0 0 6px 2px rgba(231,76,60,.6); }
+  .sem-light.active-warn  { background: #f39c12; box-shadow: 0 0 6px 2px rgba(243,156,18,.6); }
+  .sem-light.active-green { background: #2ecc71; box-shadow: 0 0 6px 2px rgba(46,204,113,.6); }
+  .legend-note { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-left: 4px; }
+
+  /* TABEL COMPARATIV */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .compare-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border2);
+    white-space: nowrap;
+  }
+  .compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: var(--surface2); }
+  .compare-table .team-label { font-weight: 600; color: var(--text); }
+  .compare-table .num { font-family: 'DM Mono', monospace; text-align: right; }
+  .compare-table th.num { text-align: right; }
+  .podea-bar-wrap { width: 80px; height: 6px; background: var(--border2); border-radius: 3px; display: inline-block; vertical-align: middle; margin-left: 6px; }
+  .podea-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .highlight-bad td { background: rgba(220,38,38,.04); }
+  .highlight-bad:hover td { background: rgba(220,38,38,.08) !important; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">ITC <span>AUMOVIO</span></div>
+  <div class="nav-links">
+    <a class="nav-link active" onclick="showPage('p1',this)">Operațiuni depozit</a>
+    <a class="nav-link" onclick="showPage('p2',this)">Stoc & Movements</a>
+    <a class="nav-link" onclick="showPage('p3',this)">Livrări inbound</a>
+  </div>
+</nav>
+
+<!-- PAGE 1 -->
+<div class="page active" id="p1">
+  <div class="page-header">
+    <div class="page-title">Operațiuni depozit</div>
+    <div class="page-sub" id="p1sub">— ture înregistrate</div>
+  </div>
+
+  <div class="month-filter">
+    <label>Lună</label>
+    <select id="monthSelect" onchange="applyFilter()">
+      <option value="all">Toate</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți descărcați / tură <span class="chart-semafor" id="semDesc"><span class="sem-light" id="semDesc-r"></span><span class="sem-light" id="semDesc-w"></span><span class="sem-light" id="semDesc-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#1a9e5c"></span>Descărcați</span>
+      <span><span class="lsq" style="background:rgba(26,158,92,.25);border:1px dashed #1a9e5c"></span>Target ≥ 200</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cDesc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți încărcați / tură <span class="chart-semafor" id="semInc"><span class="sem-light" id="semInc-r"></span><span class="sem-light" id="semInc-w"></span><span class="sem-light" id="semInc-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#185FA5"></span>Încărcați</span>
+      <span><span class="lsq" style="background:rgba(24,95,165,.2);border:1px dashed #185FA5"></span>Target ≥ 198</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cInc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți recepționați la podea la final de tură <span class="chart-semafor" id="semRec"><span class="sem-light" id="semRec-r"></span><span class="sem-light" id="semRec-w"></span><span class="sem-light" id="semRec-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#8e44ad"></span>Paleți recepționați la podea la final de tură</span>
+      <span><span class="lsq" style="background:rgba(142,68,173,.2);border:1px dashed #8e44ad"></span>Target = 0</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cRec"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Performanță per team</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="team-grid" id="teamGrid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Analiză comparativă — paleți lăsați la podea</div>
+      <div class="section-line"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:'DM Mono',monospace;">
+      Comparație între echipe: volum muncă vs paleți rămași la podea la final de tură
+    </div>
+    <div id="compareTable"></div>
+  </div>
+
+</div>
+
+<!-- PAGE 2 -->
+<div class="page" id="p2">
+  <div class="page-header">
+    <div class="page-title">Stoc & Movements</div>
+    <div class="page-sub" id="p2sub">Power BI extract · lunar</div>
+  </div>
+
+  <div class="month-filter">
+    <label>Lună</label>
+    <select id="monthSelect2" onchange="applyFilter2()">
+      <option value="all">Toate</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid2"></div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Paleți în stoc (TotalPallets_V2) <span class="chart-semafor" id="semPal"><span class="sem-light" id="semPal-r"></span><span class="sem-light" id="semPal-w"></span><span class="sem-light" id="semPal-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#8e44ad"></span>Paleți stoc zilnic</span>
+      <span><span class="lsq" style="background:rgba(142,68,173,.2);border:1px dashed #8e44ad"></span>Target ≥ 15.000</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="cPal"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Ocupare rafturi (TotalBins_V2) <span class="chart-semafor" id="semStock"><span class="sem-light" id="semStock-r"></span><span class="sem-light" id="semStock-w"></span><span class="sem-light" id="semStock-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#185FA5"></span>Bins ocupate</span>
+      <span><span class="lsq" style="background:rgba(26,158,92,.25);border:1px dashed #1a9e5c"></span>Target 70–90%</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="cStock"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Movements zilnice (FromITC + ToITC) <span class="chart-semafor" id="semMov"><span class="sem-light" id="semMov-r"></span><span class="sem-light" id="semMov-w"></span><span class="sem-light" id="semMov-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#1a9e5c"></span>FromITC</span>
+      <span><span class="lsq" style="background:#185FA5"></span>ToITC</span>
+      <span><span class="lsq" style="background:rgba(243,156,18,.3);border:1px dashed #d97706"></span>Target/zi ≥ 1.364 (30.000/22 zile)</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="cMov"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE 3 -->
+<div class="page" id="p3">
+  <div class="page-header">
+    <div class="page-title">Livrări inbound</div>
+    <div class="page-sub" id="p3sub">Export AUMOVIO · camioane & loading units</div>
+  </div>
+
+  <div class="month-filter">
+    <label>Lună</label>
+    <select id="monthSelect3" onchange="applyFilter3()">
+      <option value="all">Toate</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid3"></div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Camioane / zi <span class="chart-semafor" id="semCam"><span class="sem-light" id="semCam-r"></span><span class="sem-light" id="semCam-w"></span><span class="sem-light" id="semCam-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#185FA5"></span>Camioane</span>
+      <span><span class="lsq" style="background:rgba(24,95,165,.2);border:1px dashed #185FA5"></span>Target ≥ 5/zi</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="cCam"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Loading Units / zi <span class="chart-semafor" id="semLU"><span class="sem-light" id="semLU-r"></span><span class="sem-light" id="semLU-w"></span><span class="sem-light" id="semLU-g"></span></span></div>
+      <div class="section-line"></div>
+    </div>
+    <div class="legend">
+      <span><span class="lsq" style="background:#1a9e5c"></span>Loading Units</span>
+      <span><span class="lsq" style="background:rgba(26,158,92,.25);border:1px dashed #1a9e5c"></span>Target ≥ 330/zi</span>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="cLU"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const DEFAULT_DATA = [
+["29.05.2026 18:40:37","Petcu","Tat Ioan","Da","Da","R1, R8 se încălzește da eroare","","Team 2 - Petcu Nicolae","07:00 - 19:00",334,258,121,50],
+["30.05.2026 06:37:58","Tat","Costin","Da","Da","R1,defect/R8,se încălzește și nu mai funcționează/R6se încălzește și se oprește brusc/R5 se încălzește și miroase urat de la baterie","","Team 4 - Tat Ioan","19:00 - 07:00",304,211,98,0],
+["30.05.2026 19:17:15","Costin","Petcu","Da","Da","R6 se incalzeste si se opreste","","Team 3 - Costin Alexandru","07:00 - 19:00",153,232,168,0],
+["31.05.2026 06:23:30","Petcu","Palasanu","Da","Da","R8 se incalzeste","","Team 2 - Petcu Nicolae","19:00 - 07:00",135,213,51,0],
+["01.06.2026 06:48:24","Devicsi","Ionica","Da","Da","","","Team 3 - Costin Alexandru","19:00 - 07:00",5,206,5,0],
+["01.06.2026 18:54:10","Pop Bogdan","Palasanu Andreas","Da","Da","","","Team 4 - Tat Ioan","07:00 - 19:00",12,84,0,0],
+["02.06.2026 06:42:16","Palasanu","Petcu","Da","Da","","","Team 1 - Palasanu Andreas","19:00 - 07:00",30,20,0,0],
+["02.06.2026 18:20:25","Petcu","Tat Ionica","Da","Da","R8 si R6 se incalzesc","","Team 2 - Petcu Nicolae","07:00 - 19:00",651,285,44,66],
+["03.06.2026 06:24:23","Tat","Costin","Da","Da","R1 defect/R5 defect sare acid de la baterie/R8 se încălzește","","Team 4 - Tat Ioan","19:00 - 07:00",295,211,20,0],
+["03.06.2026 18:54:29","Costin","Petcu","Da","Da","R5 curge acid","","Team 3 - Costin Alexandru","07:00 - 19:00",421,242,81,35],
+["04.06.2026 06:18:31","Petcu","Palasanu","Da","Da","R6 ,R8 se incalzesc +eroare bord","","Team 2 - Petcu Nicolae","19:00 - 07:00",232,261,0,30],
+["04.06.2026 18:21:59","Palasanu","Costin","Da","Da","","","Team 1 - Palasanu Andreas","07:00 - 19:00",302,184,0,0]
+];
+
+const TARGET_DESC = 200;
+const TARGET_INC = 198;
+const TARGET_REC = 0; // paleți recepționați la podea
+
+let allData = DEFAULT_DATA;
+let data = DEFAULT_DATA;
+let charts = {};
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+function getMonth(ts) {
+  // ts format: "DD.MM.YYYY HH:MM:SS"
+  const p = ts.split('.');
+  if (p.length < 3) return '';
+  const month = p[1];
+  const year = p[2].split(' ')[0];
+  return year + '-' + month;
+}
+
+function monthLabel(key) {
+  if (key === 'all') return 'Toate';
+  const [y, m] = key.split('-');
+  const months = ['','Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
+  return months[parseInt(m)] + ' ' + y;
+}
+
+function buildMonthFilter() {
+  const months = {};
+  allData.forEach(r => {
+    const k = getMonth(r[0]);
+    if (k) months[k] = (months[k]||0) + 1;
+  });
+  const sel = document.getElementById('monthSelect');
+  const current = sel.value;
+  // clear & rebuild options
+  sel.innerHTML = '<option value="all">Toate</option>';
+  Object.keys(months).sort().forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = monthLabel(k);
+    sel.appendChild(opt);
+  });
+  // restore selection if still valid
+  if (current && sel.querySelector(`option[value="${current}"]`)) {
+    sel.value = current;
+  }
+}
+
+function applyFilter() {
+  const sel = document.getElementById('monthSelect').value;
+  if (sel === 'all') {
+    data = allData;
+  } else {
+    data = allData.filter(r => getMonth(r[0]) === sel);
+  }
+  render();
+}
+
+function isWeekend(ts) {
+  // ts: "DD.MM.YYYY HH:MM:SS"
+  const p = ts.split('.');
+  if (p.length < 3) return false;
+  const [day, month, yearTime] = p;
+  const year = yearTime.split(' ')[0];
+  const d = new Date(`${year}-${month}-${day}`);
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+function setSemafor(id, avg, target, higherBetter) {
+  const r = document.getElementById(id + '-r');
+  const w = document.getElementById(id + '-w');
+  const g = document.getElementById(id + '-g');
+  if (!r || !w || !g) return;
+  r.className = 'sem-light';
+  w.className = 'sem-light';
+  g.className = 'sem-light';
+  if (higherBetter) {
+    const pct = avg / target;
+    if (pct >= 1)         g.className = 'sem-light active-green';
+    else if (pct >= 0.8)  w.className = 'sem-light active-warn';
+    else                  r.className = 'sem-light active-red';
+  } else {
+    if (avg === 0)        g.className = 'sem-light active-green';
+    else if (avg <= 20)   w.className = 'sem-light active-warn';
+    else                  r.className = 'sem-light active-red';
+  }
+}
+
+function shortDate(ts) {
+  const p = ts.split(' ');
+  return p[0].substring(0,5) + ' ' + p[1].substring(0,5);
+}
+
+function statusColor(val, target, higherBetter) {
+  if (higherBetter) {
+    const pct = val / target;
+    if (pct >= 1) return '#157a47';
+    if (pct >= 0.8) return '#b45309';
+    return '#b91c1c';
+  } else {
+    if (val === 0) return '#157a47';
+    if (val <= 20) return '#b45309';
+    return '#b91c1c';
+  }
+}
+
+function badgeClass(val, target, higherBetter) {
+  if (higherBetter) {
+    const pct = val / target;
+    if (pct >= 1) return 'badge-ok';
+    if (pct >= 0.75) return 'badge-warn';
+    return 'badge-bad';
+  } else {
+    if (val === 0) return 'badge-ok';
+    if (val <= 20) return 'badge-warn';
+    return 'badge-bad';
+  }
+}
+
+function render() {
+  const n = data.length;
+  if (n === 0) {
+    document.getElementById('kpiGrid').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Nicio tură în perioada selectată.</div>';
+    document.getElementById('teamGrid').innerHTML = '';
+    document.getElementById('monthCount').textContent = '0 ture';
+    return;
+  }
+
+  const totalDesc = data.reduce((s,r) => s + r[9], 0);
+  const totalInc = data.reduce((s,r) => s + r[10], 0);
+  const totalRec = data.reduce((s,r) => s + r[12], 0); // col 12 = paleți recepționați la podea
+  const avgDesc = Math.round(totalDesc / n);
+  const avgInc = Math.round(totalInc / n);
+  const avgRec = Math.round(totalRec / n);
+  const tureAboveDesc = data.filter(r => r[9] >= TARGET_DESC).length;
+  const tureAboveInc = data.filter(r => r[10] >= TARGET_INC).length;
+  const tureZeroRec = data.filter(r => r[12] === 0).length;
+
+  const pctDesc = Math.min(100, Math.round(avgDesc / TARGET_DESC * 100));
+  const pctInc = Math.min(100, Math.round(avgInc / TARGET_INC * 100));
+  const colDesc = statusColor(avgDesc, TARGET_DESC, true);
+  const colInc = statusColor(avgInc, TARGET_INC, true);
+  const colRec = statusColor(avgRec, TARGET_REC, false);
+  // for rec bar: 0 = 100% good, anything above = red
+  const pctRec = avgRec === 0 ? 100 : Math.min(100, Math.round(avgRec / 100 * 100));
+
+  // date range
+  const d0 = data[0][0].split(' ')[0];
+  const d1 = data[n-1][0].split(' ')[0];
+  document.getElementById('p1sub').textContent = `${d0} – ${d1}`;
+
+  // Semafoare
+  setSemafor('semDesc', avgDesc, TARGET_DESC, true);
+  setSemafor('semInc', avgInc, TARGET_INC, true);
+  setSemafor('semRec', avgRec, TARGET_REC, false);
+
+  // KPI cards — fără defecte
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colDesc}"></span>Paleți descărcați — medie/tură</div>
+      <div class="kpi-value">${avgDesc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_DESC} · ${tureAboveDesc}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${pctDesc}%;background:${colDesc}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colInc}"></span>Paleți încărcați — medie/tură</div>
+      <div class="kpi-value">${avgInc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_INC} · ${tureAboveInc}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${pctInc}%;background:${colInc}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#185FA5"></span>Total paleți descărcați</div>
+      <div class="kpi-value">${totalDesc.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">perioada selectată · ${n} ture</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:100%;background:#185FA5"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colRec}"></span>Paleți rămași la podea — finalul turei</div>
+      <div class="kpi-value">${avgRec.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target = 0 · ${tureZeroRec}/${n} ture ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${avgRec===0?100:Math.min(100,pctRec)}%;background:${colRec}"></div></div>
+    </div>
+  `;
+
+  // Grafice separate per KPI
+  const labels = data.map(r => shortDate(r[0]));
+  const descArr = data.map(r => r[9]);
+  const incArr = data.map(r => r[10]);
+  const recArr = data.map(r => r[12]);
+
+  const chartOpts = () => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 10, family: 'DM Mono' }, maxRotation: 45, autoSkip: false } },
+      y: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 11 } }, suggestedMin: 0 }
+    }
+  });
+
+  // Chart Descărcat
+  if (charts.cDesc) charts.cDesc.destroy();
+  charts.cDesc = new Chart(document.getElementById('cDesc'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Descărcați', data: descArr, backgroundColor: 'rgba(26,158,92,.7)', borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(TARGET_DESC), type: 'line', borderColor: '#1a9e5c', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: chartOpts()
+  });
+
+  // Chart Încărcat
+  if (charts.cInc) charts.cInc.destroy();
+  charts.cInc = new Chart(document.getElementById('cInc'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Încărcați', data: incArr, backgroundColor: 'rgba(24,95,165,.7)', borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(TARGET_INC), type: 'line', borderColor: '#185FA5', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: chartOpts()
+  });
+
+  // Chart Podea
+  if (charts.cRec) charts.cRec.destroy();
+  charts.cRec = new Chart(document.getElementById('cRec'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Podea finalul turei', data: recArr, backgroundColor: recArr.map(v => v === 0 ? 'rgba(26,158,92,.55)' : 'rgba(142,68,173,.7)'), borderRadius: 4 },
+        { label: 'Target', data: Array(n).fill(0), type: 'line', borderColor: '#8e44ad', borderDash: [5,4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      ...chartOpts(),
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 10, family: 'DM Mono' }, maxRotation: 45, autoSkip: false } },
+        y: { grid: { color: 'rgba(0,0,0,.06)' }, ticks: { color: '#6b7280', font: { size: 11 }, stepSize: 10 }, suggestedMin: 0, suggestedMax: Math.max(...recArr, 10) + 5 }
+      }
+    }
+  });
+
+  // Teams
+  const teams = {};
+  const teamOrder = ['Team 1 - Palasanu Andreas','Team 2 - Petcu Nicolae','Team 3 - Costin Alexandru','Team 4 - Tat Ioan'];
+  data.forEach(r => {
+    const t = r[7];
+    if (!teams[t]) teams[t] = { ture:0, desc:0, inc:0, rec:0 };
+    teams[t].ture++;
+    teams[t].desc += r[9];
+    teams[t].inc += r[10];
+    teams[t].rec += r[12];
+  });
+
+  let teamHtml = '';
+  teamOrder.forEach(t => {
+    const d = teams[t];
+    if (!d) return;
+    const avgD = Math.round(d.desc / d.ture);
+    const avgI = Math.round(d.inc / d.ture);
+    const avgR = Math.round(d.rec / d.ture);
+    const bcD = badgeClass(avgD, TARGET_DESC, true);
+    const bcI = badgeClass(avgI, TARGET_INC, true);
+    const bcR = badgeClass(avgR, TARGET_REC, false);
+    const shortN = t.replace('Team ', 'T').replace(' - ', ' · ');
+    teamHtml += `<div class="team-card">
+      <div class="team-name">${shortN}</div>
+      <div class="team-row"><span>Ture</span><span class="team-val">${d.ture}</span></div>
+      <div class="team-row"><span>Desc. mediu/tură</span><span class="badge ${bcD}">${avgD}</span></div>
+      <div class="team-row"><span>Inc. mediu/tură</span><span class="badge ${bcI}">${avgI}</span></div>
+      <div class="team-row"><span>Podea finalul turei</span><span class="badge ${bcR}">${avgR}</span></div>
+    </div>`;
+  });
+  document.getElementById('teamGrid').innerHTML = teamHtml;
+
+  renderCompare();
+}
+
+function renderCompare() {
+  const teamOrder = ['Team 1 - Palasanu Andreas','Team 2 - Petcu Nicolae','Team 3 - Costin Alexandru','Team 4 - Tat Ioan'];
+  const stats = {};
+  teamOrder.forEach(t => { stats[t] = { ture:0, desc:0, inc:0, recTotal:0, tureCuPodea:0, maxPodea:0 }; });
+
+  data.forEach(r => {
+    const t = r[7];
+    if (!stats[t]) return;
+    const rec = r[12];
+    stats[t].ture++;
+    stats[t].desc += r[9];
+    stats[t].inc  += r[10];
+    stats[t].recTotal += rec;
+    if (rec > 0) stats[t].tureCuPodea++;
+    if (rec > stats[t].maxPodea) stats[t].maxPodea = rec;
+  });
+
+  // max avg podea pentru bara relativă
+  const maxAvgPodea = Math.max(...teamOrder.map(t => {
+    const s = stats[t];
+    return s.ture ? s.recTotal / s.ture : 0;
+  }), 1);
+
+  // sortăm după % ture cu podea descrescător (problema vizibilă primul)
+  const sorted = [...teamOrder].filter(t => stats[t].ture > 0).sort((a,b) => {
+    const pA = stats[a].tureCuPodea / stats[a].ture;
+    const pB = stats[b].tureCuPodea / stats[b].ture;
+    return pB - pA;
+  });
+
+  let html = `<table class="compare-table">
+    <thead>
+      <tr>
+        <th>Echipă</th>
+        <th class="num">Ture</th>
+        <th class="num">Desc. med/tură</th>
+        <th class="num">Inc. med/tură</th>
+        <th class="num">Ture cu podea</th>
+        <th class="num">% ture cu podea</th>
+        <th class="num">Med. podea/tură</th>
+        <th class="num">Max podea</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  sorted.forEach(t => {
+    const s = stats[t];
+    if (!s.ture) return;
+    const avgDesc = Math.round(s.desc / s.ture);
+    const avgInc  = Math.round(s.inc  / s.ture);
+    const avgRec  = +(s.recTotal / s.ture).toFixed(1);
+    const pctPodea = Math.round(s.tureCuPodea / s.ture * 100);
+    const barW = Math.round(avgRec / maxAvgPodea * 100);
+    const isBad = pctPodea >= 30; // highlight dacă >30% ture cu podea
+
+    // culoare bară
+    const barColor = pctPodea === 0 ? '#157a47' : pctPodea < 30 ? '#b45309' : '#b91c1c';
+    const pctColor = pctPodea === 0 ? '#157a47' : pctPodea < 30 ? '#b45309' : '#b91c1c';
+
+    const shortName = t.replace('Team 1 - ','T1 · ').replace('Team 2 - ','T2 · ').replace('Team 3 - ','T3 · ').replace('Team 4 - ','T4 · ');
+
+    html += `<tr class="${isBad ? 'highlight-bad' : ''}">
+      <td class="team-label">${shortName}</td>
+      <td class="num">${s.ture}</td>
+      <td class="num">${avgDesc}</td>
+      <td class="num">${avgInc}</td>
+      <td class="num">${s.tureCuPodea}</td>
+      <td class="num" style="color:${pctColor};font-weight:600">${pctPodea}%</td>
+      <td class="num">
+        ${avgRec}
+        <span class="podea-bar-wrap"><span class="podea-bar-fill" style="width:${barW}%;background:${barColor}"></span></span>
+      </td>
+      <td class="num">${s.maxPodea}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('compareTable').innerHTML = html;
+}
+
+function parseRows(txt) {
+  const lines = txt.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const p = lines[i].split('\t');
+    if (p.length < 10) continue;
+    const desc = parseInt(p[9]) || 0;
+    const inc = parseInt(p[10]) || 0;
+    const nrec = parseInt(p[11]) || 0;
+    const rec = parseInt(p[12]) || 0;
+    if (!p[0].trim()) continue;
+    rows.push([p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),(p[5]||'').trim(),(p[6]||'').trim(),(p[7]||'').trim(),(p[8]||'').trim(),desc,inc,nrec,rec]);
+  }
+  return rows.length ? rows : null;
+}
+
+function importData() {
+  const txt = document.getElementById('pasteArea').value.trim();
+  if (!txt) { document.getElementById('importMsg').textContent = 'Lipește date mai întâi.'; return; }
+  const rows = parseRows(txt);
+  if (!rows) { document.getElementById('importMsg').textContent = 'Format nerecunoscut — copiază direct din Sheets.'; return; }
+  allData = rows;
+  buildMonthFilter();
+  applyFilter();
+  document.getElementById('importMsg').textContent = rows.length + ' ture importate ✓';
+  document.getElementById('pasteArea').value = '';
+}
+
+// ============================================================
+// PAGE 2 — STOC & MOVEMENTS
+// ============================================================
+// Format: [month_key, day, totalBins, fromITC, toITC]
+const TOTAL_BINS = 18443; // locații totale depozit
+const TARGET_OCC_MIN = 0.70;
+const TARGET_OCC_MAX = 0.90;
+const TARGET_MOV_MONTHLY = 30000;
+
+// Format: [month_key, day, pallets, bins, fromITC, toITC]
+const DEFAULT_STOCK = [
+  ["2026-05",1,15258,13014,385,461],["2026-05",2,15223,12977,335,374],["2026-05",3,14874,12650,360,134],
+  ["2026-05",4,14917,12702,317,549],["2026-05",5,15142,12916,490,797],["2026-05",6,15224,12977,607,804],
+  ["2026-05",7,15300,13060,559,766],["2026-05",8,15374,13133,430,668],["2026-05",9,15331,13093,507,618],
+  ["2026-05",10,15052,12850,327,220],["2026-05",11,15047,12843,783,921],["2026-05",12,15330,13077,518,949],
+  ["2026-05",13,15592,13306,541,931],["2026-05",14,15603,13310,415,661],["2026-05",15,15694,13372,377,679],
+  ["2026-05",16,15567,13251,376,392],["2026-05",17,15299,13027,506,359],["2026-05",18,15417,13173,629,907],
+  ["2026-05",19,15338,13338,559,915],["2026-05",20,15462,13462,450,816],["2026-05",21,15562,13562,460,822],
+  ["2026-05",22,15568,13568,541,782],["2026-05",23,15522,13522,527,627],["2026-05",24,15314,13314,492,307],
+  ["2026-05",25,15247,13247,552,609],["2026-05",26,15283,13283,460,1050],["2026-05",27,15381,13381,600,881],
+  ["2026-05",28,15335,13335,480,659],["2026-05",29,15264,13264,1586,749],["2026-05",30,15267,13267,362,613],
+  ["2026-05",31,15155,13155,224,190]
+];
+
+let allStock = [...DEFAULT_STOCK];
+let stockData = [...DEFAULT_STOCK];
+
+function getStockMonths() {
+  const m = {};
+  allStock.forEach(r => { m[r[0]] = true; });
+  return Object.keys(m).sort();
+}
+
+function buildMonthFilter2() {
+  const sel = document.getElementById('monthSelect2');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">Toate</option>';
+  getStockMonths().forEach(k => {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = monthLabel(k);
+    sel.appendChild(o);
+  });
+  if (cur && sel.querySelector(`option[value="${cur}"]`)) sel.value = cur;
+}
+
+function applyFilter2() {
+  const sel = document.getElementById('monthSelect2').value;
+  stockData = sel === 'all' ? allStock : allStock.filter(r => r[0] === sel);
+  renderStock();
+}
+
+function setSemaforStock(id, val, minT, maxT) {
+  const r = document.getElementById(id+'-r');
+  const w = document.getElementById(id+'-w');
+  const g = document.getElementById(id+'-g');
+  if (!r||!w||!g) return;
+  r.className='sem-light'; w.className='sem-light'; g.className='sem-light';
+  if (val >= minT && val <= maxT) g.className='sem-light active-green';
+  else if (val >= minT*0.95 || val <= maxT*1.05) w.className='sem-light active-warn';
+  else r.className='sem-light active-red';
+}
+
+function renderStock() {
+  if (!stockData.length) return;
+  const labels = stockData.map(r => r[0].slice(5)+'/'+String(r[1]).padStart(2,'0'));
+  const pallets= stockData.map(r => r[2]);
+  const bins   = stockData.map(r => r[3]);
+  const from   = stockData.map(r => r[4]);
+  const to     = stockData.map(r => r[5]);
+  const occ    = bins.map(b => +(b/TOTAL_BINS*100).toFixed(1));
+  const targetPal = 15000;
+  const avgPal = Math.round(pallets.reduce((s,v)=>s+v,0)/pallets.length);
+  const avgOcc = +(occ.reduce((s,v)=>s+v,0)/occ.length).toFixed(1);
+  const totalMov = from.reduce((s,v)=>s+v,0) + to.reduce((s,v)=>s+v,0);
+  const avgMovDay = Math.round(totalMov / stockData.length);
+
+  // Raggrupăm lunile unice pentru sumar
+  const months = [...new Set(stockData.map(r=>r[0]))];
+  document.getElementById('p2sub').textContent = months.map(m=>monthLabel(m)).join(', ');
+
+  // Semafor paleți
+  const semPr = document.getElementById('semPal-r');
+  const semPw = document.getElementById('semPal-w');
+  const semPg = document.getElementById('semPal-g');
+  if(semPr&&semPw&&semPg){
+    semPr.className='sem-light';semPw.className='sem-light';semPg.className='sem-light';
+    const pp = avgPal/targetPal;
+    if(pp>=1) semPg.className='sem-light active-green';
+    else if(pp>=0.9) semPw.className='sem-light active-warn';
+    else semPr.className='sem-light active-red';
+  }
+
+  document.getElementById('kpiGrid2').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#8e44ad"></span>Paleți în stoc — medie zilnică</div>
+      <div class="kpi-value">${avgPal.toLocaleString('ro')}<span class="kpi-unit">pal</span></div>
+      <div class="kpi-target">target ≥ ${targetPal.toLocaleString('ro')} · ${pallets.filter(v=>v>=targetPal).length}/${pallets.length} zile ✓</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.min(100,Math.round(avgPal/targetPal*100))}%;background:${avgPal>=targetPal?'#157a47':avgPal>=targetPal*0.9?'#b45309':'#b91c1c'}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#185FA5"></span>Ocupare medie rafturi</div>
+      <div class="kpi-value">${avgOcc}<span class="kpi-unit">%</span></div>
+      <div class="kpi-target">target 70–90% · ${TOTAL_BINS.toLocaleString('ro')} locații total</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.min(100,avgOcc)}%;background:${avgOcc>=70&&avgOcc<=90?'#157a47':avgOcc<70?'#b45309':'#b91c1c'}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#1a9e5c"></span>Total movements perioadă</div>
+      <div class="kpi-value">${totalMov.toLocaleString('ro')}<span class="kpi-unit">mv</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_MOV_MONTHLY.toLocaleString('ro')}/lună · medie ${avgMovDay}/zi</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.min(100,Math.round(totalMov/TARGET_MOV_MONTHLY/months.length*100))}%;background:${totalMov/months.length>=TARGET_MOV_MONTHLY?'#157a47':'#b91c1c'}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#8e44ad"></span>FromITC total</div>
+      <div class="kpi-value">${from.reduce((s,v)=>s+v,0).toLocaleString('ro')}<span class="kpi-unit">mv</span></div>
+      <div class="kpi-target">mișcări dinspre ITC</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.round(from.reduce((s,v)=>s+v,0)/totalMov*100)}%;background:#8e44ad"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#d97706"></span>ToITC total</div>
+      <div class="kpi-value">${to.reduce((s,v)=>s+v,0).toLocaleString('ro')}<span class="kpi-unit">mv</span></div>
+      <div class="kpi-target">mișcări înspre ITC</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.round(to.reduce((s,v)=>s+v,0)/totalMov*100)}%;background:#d97706"></div></div>
+    </div>
+  `;
+
+  setSemaforStock('semStock', avgOcc, 70, 90);
+
+  // semafor movements
+  const movPerMonth = totalMov/months.length;
+  const smr = document.getElementById('semMov-r');
+  const smw = document.getElementById('semMov-w');
+  const smg = document.getElementById('semMov-g');
+  if(smr&&smw&&smg){
+    smr.className='sem-light';smw.className='sem-light';smg.className='sem-light';
+    if(movPerMonth>=TARGET_MOV_MONTHLY) smg.className='sem-light active-green';
+    else if(movPerMonth>=TARGET_MOV_MONTHLY*0.85) smw.className='sem-light active-warn';
+    else smr.className='sem-light active-red';
+  }
+
+  const chartBase = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b7280',font:{size:10,family:'DM Mono'},maxRotation:45,autoSkip:true,maxTicksLimit:15}},
+      y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b7280',font:{size:11}},suggestedMin:0}
+    }
+  };
+
+  // Chart Paleți stoc
+  if(charts.cPal) charts.cPal.destroy();
+  charts.cPal = new Chart(document.getElementById('cPal'),{
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Paleți stoc',data:pallets,backgroundColor:'rgba(142,68,173,.7)',borderRadius:3},
+      {label:'Target',data:Array(labels.length).fill(targetPal),type:'line',borderColor:'#8e44ad',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:{...chartBase, scales:{...chartBase.scales, y:{...chartBase.scales.y, suggestedMin:Math.min(...pallets)*0.97}}}
+  });
+
+  if(charts.cStock) charts.cStock.destroy();
+  charts.cStock = new Chart(document.getElementById('cStock'),{
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Ocupare %',data:occ,borderColor:'#185FA5',backgroundColor:'rgba(24,95,165,.08)',borderWidth:2,pointRadius:2,fill:true,tension:.3},
+      {label:'Min 70%',data:Array(labels.length).fill(70),type:'line',borderColor:'#1a9e5c',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false},
+      {label:'Max 90%',data:Array(labels.length).fill(90),type:'line',borderColor:'#dc2626',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:{...chartBase, scales:{...chartBase.scales, y:{...chartBase.scales.y, min:60,max:100,ticks:{callback:v=>v+'%',color:'#6b7280',font:{size:11}}}}}
+  });
+
+  // Target zilnic movements = 30000 / zile lucratoare din luna (~22)
+  const targetMovDay = Math.round(TARGET_MOV_MONTHLY / 22);
+  if(charts.cMov) charts.cMov.destroy();
+  charts.cMov = new Chart(document.getElementById('cMov'),{
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'FromITC',data:from,backgroundColor:'rgba(26,158,92,.7)',borderRadius:3},
+      {label:'ToITC',data:to,backgroundColor:'rgba(24,95,165,.7)',borderRadius:3},
+      {label:'Target/zi',data:Array(labels.length).fill(targetMovDay),type:'line',borderColor:'#d97706',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:chartBase
+  });
+}
+
+function importData2() {
+  const mon = (document.getElementById('p2month').value||'').trim();
+  const depTxt = (document.getElementById('pasteArea2dep').value||'').trim();
+  const movTxt = (document.getElementById('pasteArea2mov').value||'').trim();
+  if(!mon||!depTxt||!movTxt){document.getElementById('importMsg2').textContent='Completează luna și ambele câmpuri.';return;}
+  if(!/^\d{4}-\d{2}$/.test(mon)){document.getElementById('importMsg2').textContent='Format lună incorect (ex: 2026-06).';return;}
+
+  const depRows={};
+  depTxt.split('\n').forEach(l=>{const p=l.split('\t');if(p.length>=2){const d=parseInt(p[0]);
+    // suporta 2 coloane (day,bins) sau 3 coloane (day,pallets,bins)
+    if(p.length>=3) depRows[d]={pallets:parseInt(p[1])||0,bins:parseInt(p[2])||0};
+    else depRows[d]={pallets:0,bins:parseInt(p[1])||0};
+  }});
+  const movRows={};
+  movTxt.split('\n').forEach(l=>{const p=l.split('\t');if(p.length>=3){const d=parseInt(p[0]);const f=parseInt(p[1]);const t=parseInt(p[2]);if(d) movRows[d]={f:f||0,t:t||0};}});
+
+  const days=Object.keys(depRows).map(Number).sort((a,b)=>a-b);
+  if(!days.length){document.getElementById('importMsg2').textContent='Date invalide.';return;}
+
+  // Elimină luna existentă dacă există
+  allStock = allStock.filter(r=>r[0]!==mon);
+  days.forEach(d=>{
+    const dep=depRows[d]||{pallets:0,bins:0};
+    const mv=movRows[d]||{f:0,t:0};
+    allStock.push([mon,d,dep.pallets,dep.bins,mv.f,mv.t]);
+  });
+  allStock.sort((a,b)=>a[0]===b[0]?a[1]-b[1]:a[0].localeCompare(b[0]));
+  buildMonthFilter2();
+  document.getElementById('monthSelect2').value=mon;
+  applyFilter2();
+  document.getElementById('importMsg2').textContent=`${days.length} zile importate pentru ${monthLabel(mon)} ✓`;
+  document.getElementById('pasteArea2dep').value='';
+  document.getElementById('pasteArea2mov').value='';
+  document.getElementById('p2month').value='';
+}
+
+// ============================================================
+// PAGE 3 — DELIVERY
+// ============================================================
+const TARGET_CAM_DAY = 5;
+const TARGET_LU_DAY  = 330;
+
+// Format: [month_key, day, trucks, lu]  (agregat pe zi)
+const DEFAULT_DELIVERY = [
+  ["2026-05",1,3,88],["2026-05",2,5,222],["2026-05",4,17,474],["2026-05",5,22,572],
+  ["2026-05",6,17,483],["2026-05",7,17,516],["2026-05",8,18,399],["2026-05",9,5,225],
+  ["2026-05",11,25,668],["2026-05",12,16,470],["2026-05",13,15,444],["2026-05",14,17,512],
+  ["2026-05",15,15,440],["2026-05",16,10,281],["2026-05",18,17,537],["2026-05",19,15,441],
+  ["2026-05",20,14,465],["2026-05",21,14,472],["2026-05",22,16,486],["2026-05",23,10,241],
+  ["2026-05",25,16,455],["2026-05",26,18,508],["2026-05",27,14,419],["2026-05",28,13,436],
+  ["2026-05",29,13,404],["2026-05",30,11,418]
+];
+
+let allDelivery = [...DEFAULT_DELIVERY];
+let deliveryData = [...DEFAULT_DELIVERY];
+
+function getDelivMonths() {
+  const m={};
+  allDelivery.forEach(r=>{m[r[0]]=true;});
+  return Object.keys(m).sort();
+}
+
+function buildMonthFilter3() {
+  const sel = document.getElementById('monthSelect3');
+  const cur = sel.value;
+  sel.innerHTML='<option value="all">Toate</option>';
+  getDelivMonths().forEach(k=>{
+    const o=document.createElement('option');
+    o.value=k; o.textContent=monthLabel(k);
+    sel.appendChild(o);
+  });
+  if(cur&&sel.querySelector(`option[value="${cur}"]`)) sel.value=cur;
+}
+
+function applyFilter3() {
+  const sel = document.getElementById('monthSelect3').value;
+  deliveryData = sel==='all' ? allDelivery : allDelivery.filter(r=>r[0]===sel);
+  renderDelivery();
+}
+
+function renderDelivery() {
+  if(!deliveryData.length) return;
+  const labels = deliveryData.map(r=>r[0].slice(5)+'/'+String(r[1]).padStart(2,'0'));
+  const trucks = deliveryData.map(r=>r[2]);
+  const lu     = deliveryData.map(r=>r[3]);
+  const n = deliveryData.length;
+  const avgCam = +(trucks.reduce((s,v)=>s+v,0)/n).toFixed(1);
+  const avgLU  = Math.round(lu.reduce((s,v)=>s+v,0)/n);
+  const totalCam = trucks.reduce((s,v)=>s+v,0);
+  const totalLU  = lu.reduce((s,v)=>s+v,0);
+  const months = [...new Set(deliveryData.map(r=>r[0]))];
+
+  document.getElementById('p3sub').textContent = months.map(m=>monthLabel(m)).join(', ');
+
+  const colCam = avgCam>=TARGET_CAM_DAY?'#157a47':avgCam>=TARGET_CAM_DAY*0.8?'#b45309':'#b91c1c';
+  const colLU  = avgLU>=TARGET_LU_DAY?'#157a47':avgLU>=TARGET_LU_DAY*0.8?'#b45309':'#b91c1c';
+
+  document.getElementById('kpiGrid3').innerHTML=`
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colCam}"></span>Camioane — medie/zi</div>
+      <div class="kpi-value">${avgCam}<span class="kpi-unit">cam</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_CAM_DAY}/zi · total ${totalCam}</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.min(100,Math.round(avgCam/TARGET_CAM_DAY*100))}%;background:${colCam}"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:${colLU}"></span>Loading Units — medie/zi</div>
+      <div class="kpi-value">${avgLU.toLocaleString('ro')}<span class="kpi-unit">LU</span></div>
+      <div class="kpi-target">target ≥ ${TARGET_LU_DAY}/zi · total ${totalLU.toLocaleString('ro')}</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${Math.min(100,Math.round(avgLU/TARGET_LU_DAY*100))}%;background:${colLU}"></div></div>
+    </div>
+  `;
+
+  // Semafoare delivery
+  function setSem(base, val, target) {
+    const r=document.getElementById(base+'-r');
+    const w=document.getElementById(base+'-w');
+    const g=document.getElementById(base+'-g');
+    if(!r||!w||!g) return;
+    r.className='sem-light';w.className='sem-light';g.className='sem-light';
+    const p=val/target;
+    if(p>=1) g.className='sem-light active-green';
+    else if(p>=0.8) w.className='sem-light active-warn';
+    else r.className='sem-light active-red';
+  }
+  setSem('semCam',avgCam,TARGET_CAM_DAY);
+  setSem('semLU',avgLU,TARGET_LU_DAY);
+
+  const chartBase={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b7280',font:{size:10,family:'DM Mono'},maxRotation:45,autoSkip:true,maxTicksLimit:15}},
+      y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b7280',font:{size:11}},suggestedMin:0}
+    }
+  };
+
+  if(charts.cCam) charts.cCam.destroy();
+  charts.cCam=new Chart(document.getElementById('cCam'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Camioane',data:trucks,backgroundColor:'rgba(24,95,165,.7)',borderRadius:4},
+      {label:'Target',data:Array(n).fill(TARGET_CAM_DAY),type:'line',borderColor:'#185FA5',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:chartBase
+  });
+
+  if(charts.cLU) charts.cLU.destroy();
+  charts.cLU=new Chart(document.getElementById('cLU'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Loading Units',data:lu,backgroundColor:'rgba(26,158,92,.7)',borderRadius:4},
+      {label:'Target',data:Array(n).fill(TARGET_LU_DAY),type:'line',borderColor:'#1a9e5c',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:chartBase
+  });
+}
+
+function importData3() {
+  const mon=(document.getElementById('p3month').value||'').trim();
+  const txt=(document.getElementById('pasteArea3').value||'').trim();
+  if(!mon||!txt){document.getElementById('importMsg3').textContent='Completează luna și datele.';return;}
+  if(!/^\d{4}-\d{2}$/.test(mon)){document.getElementById('importMsg3').textContent='Format lună incorect (ex: 2026-06).';return;}
+
+  // Agregăm pe zi
+  const byDay={};
+  txt.split('\n').forEach(l=>{
+    const p=l.split('\t');
+    if(p.length<2) return;
+    const dateStr=p[0].trim();
+    const luVal=parseInt(p[1])||0;
+    // extrage ziua din format YYYY-MM-DD sau DD.MM.YYYY
+    let day=0;
+    const m1=dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const m2=dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if(m1) day=parseInt(m1[3]);
+    else if(m2) day=parseInt(m2[1]);
+    if(!day) return;
+    if(!byDay[day]) byDay[day]={trucks:0,lu:0};
+    byDay[day].trucks++;
+    byDay[day].lu+=luVal;
+  });
+
+  const days=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+  if(!days.length){document.getElementById('importMsg3').textContent='Date invalide.';return;}
+
+  allDelivery=allDelivery.filter(r=>r[0]!==mon);
+  days.forEach(d=>{allDelivery.push([mon,d,byDay[d].trucks,byDay[d].lu]);});
+  allDelivery.sort((a,b)=>a[0]===b[0]?a[1]-b[1]:a[0].localeCompare(b[0]));
+  buildMonthFilter3();
+  document.getElementById('monthSelect3').value=mon;
+  applyFilter3();
+  document.getElementById('importMsg3').textContent=`${days.length} zile importate pentru ${monthLabel(mon)} ✓`;
+  document.getElementById('pasteArea3').value='';
+  document.getElementById('p3month').value='';
+}
+
+// ============================================================
+// INIT — fetch date din Google Sheets
+// ============================================================
+const GS_URL = 'https://script.google.com/macros/s/AKfycbwEZbOFjBetEX1jX3aJYcQJChPyPU-Ttj2cLLhpUCSjg9MZP39E6csvmCrK-bS5gl3stg/exec';
+const GS_PROXY = 'https://corsproxy.io/?' + encodeURIComponent(GS_URL);
+
+function showLoading(msg) {
+  ['kpiGrid','teamGrid','kpiGrid2','kpiGrid3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px;">${msg}</div>`;
+  });
+}
+
+async function loadFromSheets() {
+  showLoading('Se încarcă datele...');
+  try {
+    const resp = await fetch(GS_PROXY);
+    const json = await resp.json();
+
+    // Pagina 1: Operațiuni
+    allData = [];
+    Object.entries(json.op || {}).forEach(([month, rows]) => {
+      rows.forEach(r => {
+        allData.push([r.ts, r.pred, r.preia, r.curDep, r.curUtil,
+          r.defect, r.obs, r.team, r.interval,
+          r.desc, r.inc, r.nrec, r.rec]);
+      });
+    });
+    allData.sort((a,b) => a[0].localeCompare(b[0]));
+
+    // Pagina 2: Stock
+    allStock = [];
+    Object.entries(json.stock || {}).forEach(([month, rows]) => {
+      rows.forEach(r => { allStock.push([month, r.day, r.pallets||0, r.bins, r.fromITC, r.toITC]); });
+    });
+    allStock.sort((a,b) => a[0]===b[0] ? a[1]-b[1] : a[0].localeCompare(b[0]));
+
+    // Pagina 3: Delivery
+    allDelivery = [];
+    Object.entries(json.delivery || {}).forEach(([month, rows]) => {
+      rows.forEach(r => { allDelivery.push([month, r.day, r.trucks, r.lu]); });
+    });
+    allDelivery.sort((a,b) => a[0]===b[0] ? a[1]-b[1] : a[0].localeCompare(b[0]));
+
+    // Fallback dacă Sheets-ul e gol
+    if (!allData.length)     allData = DEFAULT_DATA;
+    if (!allStock.length)    allStock = [...DEFAULT_STOCK];
+    if (!allDelivery.length) allDelivery = [...DEFAULT_DELIVERY];
+
+  } catch(e) {
+    console.warn('Sheets fetch failed, fallback to default:', e);
+    allData = DEFAULT_DATA; allStock = [...DEFAULT_STOCK]; allDelivery = [...DEFAULT_DELIVERY];
+  }
+  data = allData; stockData = allStock; deliveryData = allDelivery;
+  buildMonthFilter();  applyFilter();
+  buildMonthFilter2(); applyFilter2();
+  buildMonthFilter3(); applyFilter3();
+}
+
+loadFromSheets();
+</script>
+</body>
+</html>
